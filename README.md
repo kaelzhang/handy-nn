@@ -16,7 +16,8 @@ $ pip install nn-models
 ## Usage
 
 ```py
-import nn_models
+from nn_models import OrdinalRegression
+from nn_models.losses import OrdinalRegressionLoss
 ```
 
 ## License

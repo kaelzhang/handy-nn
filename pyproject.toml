@@ -25,7 +25,9 @@ classifiers = [
 ]
 requires-python = ">=3.7"
 dynamic = ['version']
-dependencies = []
+dependencies = [
+    "torch"
+]
 
 [project.urls]
 Homepage = "https://github.com/kaelzhang/nn-models"

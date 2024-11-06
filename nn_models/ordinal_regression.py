@@ -42,8 +42,9 @@ class OrdinalRegression(nn.Module):
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
         """
         Returns:
-        - logits: 原始输出值
-        - probas: 转换后的类别概率
+            Tuple[Tensor, Tensor]: (logits, probas)
+            - logits: raw, unnormalized output
+            - probas: probabilities transformed from logits
         """
 
         # Get the output of each classifier
@@ -62,11 +63,6 @@ class OrdinalRegression(nn.Module):
         - p(class=1) = p(logit1) - p(logit2)
         - p(class=2) = p(logit2)
         """
-
-        # probs = torch.sigmoid(logits)
-        # pad_probs = F.pad(probs, (1, 1), value=1.0)  # 在两端填充1和0
-        # probas = pad_probs[:, :-1] - pad_probs[:, 1:]
-        # return probas
 
         sigmoids = torch.sigmoid(self.cutpoints - logits)
         link_mat = sigmoids[:, 1:] - sigmoids[:, :-1]

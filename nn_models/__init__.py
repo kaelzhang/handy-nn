@@ -1,4 +1,4 @@
-from .ordinal_regression import OrdinalRegression
+from .losses import OrdinalRegressionLoss
 
 
 # The first alpha version

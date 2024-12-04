@@ -5,7 +5,7 @@
 
 # handy-nn
 
-Delightful and useful neural networks models
+Delightful and useful neural networks models, including OrdinalRegressionLoss, etc.
 
 ## Install
 

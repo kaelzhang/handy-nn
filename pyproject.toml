@@ -7,7 +7,7 @@ name = "handy-nn"
 authors = [
     {name = "Kael Zhang", email = "i+pypi@kael.me"}
 ]
-description = "Delightful and useful neural networks models, including OrdinalRegressionLoss, etc"
+description = "Delightful and useful neural networks models, including OrdinalRegressionLoss, etc."
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = ["neural-networks", "pytorch", "machine-learning", "ordinal-regression", "models"]

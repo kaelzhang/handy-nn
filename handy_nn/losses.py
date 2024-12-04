@@ -17,6 +17,16 @@ class OrdinalRegressionLoss(nn.Module):
             num_classes (int): Number of ordinal classes (ranks)
             learn_thresholds (:obj:`bool`, optional): Whether to learn threshold parameters or use fixed ones, defaults to `True`
             init_scale (:obj:`float`, optional): Scale for initializing thresholds, defaults to `2.0`
+
+        Usage::
+
+            criterion = OrdinalRegressionLoss(4)
+
+            logits = model(inputs)
+            loss = criterion(logits, targets)
+            loss.backward()
+
+            probas = criterion.predict_probas(logits)
         """
         super().__init__()
 

@@ -7,7 +7,7 @@ name = "aioretry"
 authors = [
     {name = "Kael Zhang", email = "i+pypi@kael.me"}
 ]
-description = "Delightful and useful neural networks models"
+description = "Delightful and useful neural networks models, including OrdinalRegressionLoss, etc"
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = ["aioretry"]

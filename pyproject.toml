@@ -3,14 +3,14 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aioretry"
+name = "nn-models"
 authors = [
     {name = "Kael Zhang", email = "i+pypi@kael.me"}
 ]
 description = "Delightful and useful neural networks models, including OrdinalRegressionLoss, etc"
 readme = "README.md"
 license = {file = "LICENSE"}
-keywords = ["aioretry"]
+keywords = ["neural-networks", "pytorch", "machine-learning", "ordinal-regression", "models"]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3.7",

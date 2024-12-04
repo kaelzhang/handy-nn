@@ -4,39 +4,37 @@ import torch.nn.functional as F
 
 
 class OrdinalRegressionLoss(nn.Module):
-    """
-    Implements the immediate threshold loss with logistic link function as described in
-    "On the Consistency of Ordinal Regression Methods" by Pedregosa et al.
-
-    The loss uses the immediate threshold formulation which is proven to be consistent
-    for the absolute error.
-
-    Args:
-        num_classes (int): Number of ordinal classes to partition the odds into (e.g., 5 for ratings 1-5)
-        threshold_init (str): How to initialize thresholds ('uniform' or 'ordered')
-    """
-
     def __init__(
         self,
         num_classes: int,
-        threshold_init='uniform'
+        learn_thresholds: bool=True,
+        init_scale: float=2.0
     ) -> None:
+        """
+        Initialize the Ordinal Regression Loss.
+
+        Args:
+            num_classes (int): Number of ordinal classes (ranks)
+            learn_thresholds (:obj:`bool`, optional): Whether to learn threshold parameters or use fixed ones, defaults to `True`
+            init_scale (:obj:`float`, optional): Scale for initializing thresholds, defaults to `2.0`
+        """
         super().__init__()
-        self.num_classes = num_classes
 
         num_thresholds = num_classes - 1
 
-        # Initialize thresholds θ_1 < θ_2 < ... < θ_{k-1}
-        if threshold_init == 'uniform':
-            thresholds = torch.linspace(0, 1, num_thresholds)
-        else:  # 'ordered'
-            thresholds = torch.randn(num_thresholds)
-            thresholds = torch.sort(thresholds)[0]
-
-        # Make thresholds learnable parameters
-        self.thresholds = nn.Parameter(
-            torch.log(thresholds / (1 - thresholds))
-        )
+        # Initialize thresholds
+        if learn_thresholds:
+            # Learnable thresholds: initialize with uniform spacing
+            self.thresholds = nn.Parameter(
+                torch.linspace(- init_scale, init_scale, num_thresholds),
+                requires_grad=True
+            )
+        else:
+            # Fixed thresholds with uniform spacing
+            self.register_buffer(
+                'thresholds',
+                torch.linspace(- init_scale, init_scale, num_thresholds)
+            )
 
     def forward(
         self,
@@ -44,67 +42,63 @@ class OrdinalRegressionLoss(nn.Module):
         targets: torch.Tensor
     ) -> torch.Tensor:
         """
-        Compute the immediate threshold loss.
+        Compute the ordinal regression loss.
 
         Args:
-            logits (torch.Tensor): Linear logits from model, shape (batch_size, 1)
-            targets (torch.Tensor): Target classes, shape (batch_size, ), values in [0, num_classes - 1]
+            logits (torch.Tensor): Raw predictions (batch_size, 1)
+            targets (torch.Tensor): Target classes (batch_size,) with values in [0, num_classes - 1]
 
         Returns:
-            torch.Tensor: Mean loss value
+            torch.Tensor: Loss value (batch_size,)
         """
+        # Compute binary decisions for each threshold
+        differences = logits - self.thresholds.unsqueeze(0)
+        # (batch_size, num_thresholds)
 
-        # Get sorted thresholds using sigmoid to ensure ordering
-        thresholds = torch.sigmoid(self.thresholds)
+        # Convert target classes to binary labels
+        target_labels = torch.arange(len(self.thresholds)).expand(
+            targets.size(0), -1
+        ).to(targets.device) # (batch_size, num_thresholds)
 
-        # Expand logits for comparison with all thresholds
-        pred_expanded = logits.unsqueeze(2).expand(-1, -1, self.num_classes - 1)
-
-        # Compute all binary decisions P(y > k) using logistic function
-        probas = torch.sigmoid(pred_expanded - thresholds)
-
-        # Convert ordinal targets to binary decisions
-        targets_expanded = targets.unsqueeze(1).unsqueeze(2).expand(-1, logits.size(1), self.num_classes - 1)
-        target_indices = torch.arange(self.num_classes - 1, device=logits.device).view(1, 1, -1)
-        binary_targets = (targets_expanded > target_indices).float()
+        binary_targets = (target_labels < targets.unsqueeze(1)).float()
+        # (batch_size, num_thresholds)
 
         # Compute binary cross entropy loss for each threshold
-        losses = F.binary_cross_entropy(
-            probas, binary_targets, reduction='none')
+        losses = F.binary_cross_entropy_with_logits(
+            differences,
+            binary_targets,
+            reduction='none'
+        )
+        # (batch_size, num_thresholds)
 
-        return losses.mean()
+        return losses.mean(dim=1) # (batch_size,)
 
-    def logits_to_probas(
-        self,
-        logits: torch.Tensor
-    ) -> torch.Tensor:
+    def predict_probas(self, logits: torch.Tensor) -> torch.Tensor:
         """
-        Compute class probabilities from linear predictions.
+        Convert logits to class probabilities.
+
+        Args:
+            logits (torch.Tensor): Raw predictions (batch_size, 1)
 
         Returns:
-            torch.Tensor: Class probabilities, shape (batch_size, num_features, num_classes)
+            torch.Tensor: Class probabilities (batch_size, num_classes)
         """
-        thresholds = torch.sigmoid(self.thresholds)
+        differences = logits - self.thresholds.unsqueeze(0)
 
-        # Expand logits for comparison with all thresholds
-        pred_expanded = logits.unsqueeze(2).expand(-1, -1, self.num_classes - 1)
+        # Compute cumulative probabilities using sigmoid
+        cumulative_probas = torch.sigmoid(differences)
+        # (batch_size, num_thresholds)
 
-        # Compute P(y > k) for all thresholds
-        probas = torch.sigmoid(pred_expanded - thresholds)
+        # Add boundary probabilities (0 and 1)
+        zeros = torch.zeros_like(cumulative_probas[:, :1]) # (batch_size, 1)
 
-        # Convert to class probabilities P(y = k)
-        probs = torch.zeros(
-            (logits.size(0), logits.size(1), self.num_classes),
-            device=logits.device
-        )
+        ones = torch.ones_like(zeros) # (batch_size, 1)
 
-        # P(y = 0) = 1 - P(y > 0)
-        probs[:, :, 0] = 1 - probas[:, :, 0]
+        cumulative_probas = torch.cat([zeros, cumulative_probas, ones], dim=-1)
+        # (batch_size, num_classes + 1)
 
-        # P(y = k) = P(y > k-1) - P(y > k)
-        probs[:, :, 1:-1] = probas[:, :, :-1] - probas[:, :, 1:]
+        # Convert cumulative probabilities to class probabilities
+        class_probas = cumulative_probas[:, 1:] - cumulative_probas[:, :-1]
+        # (batch_size, num_classes)
 
-        # P(y = K) = P(y > K-1)
-        probs[:, :, -1] = probas[:, :, -1]
-
-        return probs
+        return class_probas

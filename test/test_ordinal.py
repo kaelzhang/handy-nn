@@ -1,6 +1,6 @@
 import torch
 
-from nn_models import OrdinalRegressionLoss
+from handy_nn import OrdinalRegressionLoss
 
 def test_logits_to_probas():
     model = OrdinalRegressionLoss(4)

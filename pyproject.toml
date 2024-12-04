@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nn-models"
+name = "handy-nn"
 authors = [
     {name = "Kael Zhang", email = "i+pypi@kael.me"}
 ]
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kaelzhang/nn-models"
+Homepage = "https://github.com/kaelzhang/handy-nn"
 
 [project.optional-dependencies]
 dev = [
@@ -46,13 +46,13 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["nn_models"]
+packages = ["handy_nn"]
 
 [tool.setuptools.dynamic]
-version = {attr = "nn_models.__version__"}
+version = {attr = "handy_nn.__version__"}
 
 [tool.setuptools.package-data]
-nn_models = ["py.typed"]
+handy_nn = ["py.typed"]
 
 [tool.mypy]
 warn_return_any = true

@@ -1,22 +1,22 @@
-[![](https://github.com/kaelzhang/nn-models/actions/workflows/python.yml/badge.svg)](https://github.com/kaelzhang/nn-models/actions/workflows/python.yml)
-[![](https://codecov.io/gh/kaelzhang/nn-models/branch/master/graph/badge.svg)](https://codecov.io/gh/kaelzhang/nn-models)
-[![](https://img.shields.io/pypi/v/nn-models.svg)](https://pypi.org/project/nn-models/)
-[![](https://img.shields.io/pypi/l/nn-models.svg)](https://github.com/kaelzhang/nn-models)
+[![](https://github.com/kaelzhang/handy-nn/actions/workflows/python.yml/badge.svg)](https://github.com/kaelzhang/handy-nn/actions/workflows/python.yml)
+[![](https://codecov.io/gh/kaelzhang/handy-nn/branch/master/graph/badge.svg)](https://codecov.io/gh/kaelzhang/handy-nn)
+[![](https://img.shields.io/pypi/v/handy-nn.svg)](https://pypi.org/project/handy-nn/)
+[![](https://img.shields.io/pypi/l/handy-nn.svg)](https://github.com/kaelzhang/handy-nn)
 
-# nn-models
+# handy-nn
 
 Delightful and useful neural networks models
 
 ## Install
 
 ```sh
-$ pip install nn-models
+$ pip install handy-nn
 ```
 
 ## Usage
 
 ```py
-from nn_models import OrdinalRegressionLoss
+from handy_nn import OrdinalRegressionLoss
 
 # Initialize the loss function
 num_classes = 5

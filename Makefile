@@ -1,8 +1,8 @@
-files = nn_models test *.py
+files = handy_nn test *.py
 test_files = *
 
 test:
-	pytest -s -v test/test_$(test_files).py --doctest-modules --cov nn_models --cov-config=.coveragerc --cov-report term-missing
+	pytest -s -v test/test_$(test_files).py --doctest-modules --cov handy_nn --cov-config=.coveragerc --cov-report term-missing
 
 lint:
 	@echo "Running ruff..."
@@ -22,7 +22,7 @@ install-all:
 report:
 	codecov
 
-build: nn_models
+build: handy_nn
 	rm -rf dist
 	python -m build
 

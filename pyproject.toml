@@ -45,6 +45,9 @@ dev = [
     "build"
 ]
 
+[tool.setuptools]
+packages = ["nn_models"]
+
 [tool.setuptools.dynamic]
 version = {attr = "nn_models.__version__"}
 

@@ -77,11 +77,10 @@ class OrdinalRegressionLoss(nn.Module):
         losses = F.binary_cross_entropy_with_logits(
             differences,
             binary_targets,
-            reduction='none'
+            reduction='mean'
         )
-        # (batch_size, num_thresholds)
 
-        return losses.mean(dim=1) # (batch_size,)
+        return losses # torch.Size([])
 
     def predict_probas(self, logits: torch.Tensor) -> torch.Tensor:
         """

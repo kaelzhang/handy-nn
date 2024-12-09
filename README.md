@@ -1,5 +1,5 @@
 [![](https://github.com/kaelzhang/handy-nn/actions/workflows/python.yml/badge.svg)](https://github.com/kaelzhang/handy-nn/actions/workflows/python.yml)
-[![](https://codecov.io/gh/kaelzhang/handy-nn/branch/master/graph/badge.svg)](https://codecov.io/gh/kaelzhang/handy-nn)
+[![](https://codecov.io/gh/kaelzhang/handy-nn/branch/main/graph/badge.svg)](https://codecov.io/gh/kaelzhang/handy-nn)
 [![](https://img.shields.io/pypi/v/handy-nn.svg)](https://pypi.org/project/handy-nn/)
 [![](https://img.shields.io/pypi/l/handy-nn.svg)](https://github.com/kaelzhang/handy-nn)
 

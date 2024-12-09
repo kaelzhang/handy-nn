@@ -30,5 +30,3 @@ def test_ordinal_regression_loss_fixed_threshold():
     model = OrdinalRegressionLoss(4, learn_thresholds=False)
 
     do_test_for_model(model)
-
-

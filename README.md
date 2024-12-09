@@ -25,7 +25,7 @@ criterion = OrdinalRegressionLoss(num_classes)
 # For training
 logits = model(inputs)  # Shape: (batch_size, 1)
 loss = criterion(logits, targets)
-loss.backward()
+loss.backward()  # shape: torch.Size([])
 
 # To get class probabilities
 probas = criterion.predict_probas(logits)  # Shape: (batch_size, num_classes)

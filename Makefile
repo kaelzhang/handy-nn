@@ -4,6 +4,9 @@ test_files = *
 test:
 	pytest -s -v test/test_$(test_files).py --doctest-modules --cov handy_nn --cov-config=.coveragerc --cov-report term-missing
 
+test-ci:
+	pytest -s -v test/test_$(test_files).py --doctest-modules --cov handy_nn --cov-config=.coveragerc --cov-report=xml
+
 lint:
 	@echo "Running ruff..."
 	@ruff check $(files)
@@ -18,9 +21,6 @@ install:
 
 install-all:
 	pip install -U .[dev,doc]
-
-report:
-	codecov
 
 build: handy_nn
 	rm -rf dist

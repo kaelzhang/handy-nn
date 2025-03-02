@@ -31,9 +31,18 @@ loss.backward()  # shape: torch.Size([])
 probas = criterion.predict_probas(logits)  # Shape: (batch_size, num_classes)
 ```
 
+### Shapes
+
+Variable | Shape
+-------- | ----
+`logits` | `(batch_size, 1)`
+`targets` | `(batch_size,)`
+`loss` | `torch.Size([])`
+`probas` | `(batch_size, num_classes)`
+
 # APIs
 
-## OrdinalRegressionLoss(num_classes, learn_thresholds, init_scale)
+## OrdinalRegressionLoss(num_classes, learn_thresholds=True, init_scale=2.0)
 
 - **num_classes** `int`: Number of ordinal classes (ranks)
 - **learn_thresholds** `bool=True`: Whether to learn threshold parameters or use fixed ones, defaults to `True`.

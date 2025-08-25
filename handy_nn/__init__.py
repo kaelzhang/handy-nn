@@ -1,5 +1,7 @@
-from .losses import OrdinalRegressionLoss
-
+from .losses import (
+    OrdinalRegressionLoss,
+    TrendAwareLoss
+)
 
 # The first alpha version
 __version__ = '0.0.4'

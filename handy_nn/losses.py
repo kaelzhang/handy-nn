@@ -111,3 +111,69 @@ class OrdinalRegressionLoss(nn.Module):
         # (batch_size, num_classes)
 
         return class_probas
+
+
+def trend_segment_weights(labels: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the weight at each position from the label sequence.
+    The weight equals the remaining length until the end of the current trend segment.
+
+    Args:
+        labels (torch.Tensor): a 1D tensor of shape (batch_size,), where elements 0 or 1 denote SELL or BUY.
+
+    Returns:
+        torch.Tensor: a tensor with the same shape as labels, where each element is the weight at the corresponding position.
+    """
+
+    seq_len = len(labels)
+    weights = torch.ones(seq_len, dtype=torch.float32)
+    # Traverse from back to front to determine the distance
+    #   to the next reversal
+    next_change = [0] * seq_len
+
+    # The last point’s weight is set to 0 first (will add 1 later)
+    next_change[-1] = 0
+
+    # We use the next_change array to store:
+    # "the length of the same trend continuing forward from the current
+    #   position minus 1"
+    for i in range(seq_len-2, -1, -1):
+        if labels[i] == labels[i+1]:
+            # If the next label is the same, the same trend continues
+            next_change[i] = next_change[i+1] + 1
+        else:
+            # If the next label differs, the next point is a trend reversal
+            next_change[i] = 0
+
+    # next_change[i] stores the length from i to the end of this segment
+    #   (excluding i itself),
+    # so the actual weight is that value + 1
+    weights = torch.tensor([nc + 1 for nc in next_change], dtype=torch.float32)
+    return weights
+
+
+class TrendAwareLoss(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(
+        self,
+        inputs: torch.Tensor,
+        labels: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Args:
+            inputs (torch.Tensor): model output logits, shape (batch_size, 2) or (1, batch_size, 2) for convenience
+            labels (torch.Tensor): ground-truth labels, shape (batch_size,)
+        """
+        # Compute per-step cross-entropy loss
+        # per-time-step loss vector
+        ce_loss = F.cross_entropy(inputs, labels, reduction='none')
+
+        # Compute weights
+        weights = trend_segment_weights(labels)
+
+        # Weighted loss
+        weighted_loss = ce_loss * weights.to(inputs.device)
+
+        return weighted_loss.mean()

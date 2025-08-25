@@ -113,67 +113,119 @@ class OrdinalRegressionLoss(nn.Module):
         return class_probas
 
 
-def trend_segment_weights(labels: torch.Tensor) -> torch.Tensor:
+def _to_index_labels(labels: torch.Tensor) -> torch.LongTensor:
     """
-    Compute the weight at each position from the label sequence.
-    The weight equals the remaining length until the end of the current trend segment.
+    Convert labels to index form.
 
     Args:
-        labels (torch.Tensor): a 1D tensor of shape (batch_size,), where elements 0 or 1 denote SELL or BUY.
+        labels (torch.Tensor): shape either of
+        - (batch_size,) with integer class indices
+        - (batch_size, num_classes) one-hot
 
     Returns:
-        torch.Tensor: a tensor with the same shape as labels, where each element is the weight at the corresponding position.
+        torch.LongTensor: shape (batch_size,), LongTensor of class indices
     """
 
-    seq_len = len(labels)
-    weights = torch.ones(seq_len, dtype=torch.float32)
-    # Traverse from back to front to determine the distance
-    #   to the next reversal
-    next_change = [0] * seq_len
+    if labels.dim() == 1:
+        return labels.long()
+    elif labels.dim() == 2:
+        return labels.argmax(dim=-1).long()
+    else:
+        raise ValueError(
+            "labels must be (batch_size,) indices or (batch_size, num_classes) one-hot"
+        )
 
-    # The last point’s weight is set to 0 first (will add 1 later)
-    next_change[-1] = 0
+def _segment_remaining_weights(idx_labels: torch.LongTensor) -> torch.Tensor:
+    """
+    Core weighting algorithm: for each position, compute the remaining length
+    until the end of the current label segment (inclusive). Longer remaining
+    runs inside a segment receive larger weights.
 
-    # We use the next_change array to store:
-    # "the length of the same trend continuing forward from the current
-    #   position minus 1"
-    for i in range(seq_len-2, -1, -1):
-        if labels[i] == labels[i+1]:
-            # If the next label is the same, the same trend continues
-            next_change[i] = next_change[i+1] + 1
+    Args:
+        idx_labels (torch.LongTensor): shape (batch_size,)
+
+    Returns:
+        torch.Tensor: shape (batch_size,), FloatTensor of positive weights
+    """
+
+    if idx_labels.dim() != 1:
+        raise ValueError("idx_labels must be 1-D with shape (batch_size,)")
+
+    batch_size = idx_labels.shape[0]
+    device = idx_labels.device
+    weights = torch.ones(batch_size, dtype=torch.float32, device=device)
+
+    # Right-to-left scan to measure remaining run-length within the segment.
+    run_length = 0
+    weights[batch_size - 1] = 1.0
+    for i in range(batch_size - 2, -1, -1):
+        if idx_labels[i] == idx_labels[i + 1]:
+            run_length += 1
         else:
-            # If the next label differs, the next point is a trend reversal
-            next_change[i] = 0
+            run_length = 0
+        weights[i] = float(run_length + 1)
 
-    # next_change[i] stores the length from i to the end of this segment
-    #   (excluding i itself),
-    # so the actual weight is that value + 1
-    weights = torch.tensor([nc + 1 for nc in next_change], dtype=torch.float32)
     return weights
 
 
 class TrendAwareLoss(nn.Module):
-    def __init__(self) -> None:
+    """
+    Trend-aware cross-entropy loss.
+
+    Idea:
+    - Penalize "too-early / too-late" misclassification inside a label segment more heavily by multiplying per-sample cross-entropy with the segment remaining-length weight.
+    - Normalize by the sum of weights to keep a stable loss scale.
+
+    Args:
+        logits (torch.Tensor): shape (batch_size, num_classes)
+        labels (torch.Tensor): shape (batch_size,) or (batch_size, num_classes) one-hot
+
+    Note:
+        The batch dimension is interpreted as an ordered sequence for the
+        purpose of computing segment weights.
+    """
+
+    def __init__(self, reduction: str = 'mean'):
         super().__init__()
+        if reduction not in ('mean', 'sum'):
+            raise ValueError("reduction must be 'mean' or 'sum'")
+
+        self.reduction = reduction
 
     def forward(
         self,
-        inputs: torch.Tensor,
+        logits: torch.Tensor,
         labels: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Args:
-            inputs (torch.Tensor): model output logits, shape (batch_size, 2) or (1, batch_size, 2) for convenience
-            labels (torch.Tensor): ground-truth labels, shape (batch_size,)
-        """
-        # Compute per-step cross-entropy loss
-        # per-time-step loss vector
-        ce_loss = F.cross_entropy(inputs, labels, reduction='none')
+        # Shape checks for logits
+        if logits.dim() != 2:
+            raise ValueError("logits must be 2-D with shape (batch_size, num_classes)")
+        batch_size, num_classes = logits.shape
 
-        # Compute weights
-        weights = trend_segment_weights(labels)
+        # Convert labels to indices
+        idx_labels = _to_index_labels(labels)
+        if idx_labels.shape != (batch_size,):
+            raise ValueError(
+                f"labels shape {tuple(idx_labels.shape)} is not compatible with "
+                f"logits {(batch_size, num_classes)}"
+            )
 
-        # Weighted loss
-        weighted_loss = ce_loss * weights.to(inputs.device)
+        # Per-sample cross-entropy: (batch_size,)
+        ce_per_sample = F.cross_entropy(
+            logits, idx_labels, reduction='none'
+        )
 
-        return weighted_loss.mean()
+        # Segment weights along the batch (treated as ordered time)
+        weights = _segment_remaining_weights(idx_labels).to(
+            ce_per_sample.dtype
+        )
+
+        # Weighted aggregation
+        weighted = ce_per_sample * weights
+        if self.reduction == 'mean':
+            loss = weighted.sum() / (weights.sum() + 1e-12)
+        else:
+            # 'sum'
+            loss = weighted.sum()
+
+        return loss

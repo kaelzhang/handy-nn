@@ -36,7 +36,7 @@ probas = criterion.predict_probas(logits)  # Shape: (batch_size, num_classes)
 Variable | Shape
 -------- | ----
 `logits` | `(batch_size, 1)`
-`targets` | `(batch_size,)`
+`targets` | `(batch_size,)` or one-hot `(batch_size, num_classes)`
 `loss` | `torch.Size([])`
 `probas` | `(batch_size, num_classes)`
 
@@ -59,9 +59,6 @@ criterion = TrendAwareLoss()
 loss = criterion(logits, targets)
 loss.backward()
 ```
-
-- **logits** `torch.Tensor` of shape `(batch_size, num_classes)`, the logits of your model output
-- **targets** `torch.Tensor` of either `(batch_size,)` (label classifications) or `(batch_size, num_classes)` (one-hot tensors)
 
 `TrendAwareLoss` penalizes "too-early / too-late" misclassification inside a label segment more heavily by multiplying per-sample cross-entropy with the segment remaining-length weight.
 

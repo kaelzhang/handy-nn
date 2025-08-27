@@ -3,6 +3,29 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def _to_index_labels(targets: torch.Tensor) -> torch.LongTensor:
+    """
+    Convert labels to index form.
+
+    Args:
+        targets (torch.Tensor): shape either of
+        - (batch_size,) with integer class indices
+        - (batch_size, num_classes) one-hot
+
+    Returns:
+        torch.LongTensor: shape (batch_size,), LongTensor of class indices
+    """
+
+    if targets.dim() == 1:
+        return targets.long()
+    elif targets.dim() == 2:
+        return targets.argmax(dim=-1).long()
+    else:
+        raise ValueError(
+            "labels must be (batch_size,) indices or (batch_size, num_classes) one-hot"
+        )
+
+
 class OrdinalRegressionLoss(nn.Module):
     def __init__(
         self,
@@ -61,6 +84,8 @@ class OrdinalRegressionLoss(nn.Module):
         Returns:
             torch.Tensor: Loss value (batch_size,)
         """
+        targets = _to_index_labels(targets)
+
         # Compute binary decisions for each threshold
         differences = logits - self.thresholds.unsqueeze(0)
         # (batch_size, num_thresholds)
@@ -112,28 +137,6 @@ class OrdinalRegressionLoss(nn.Module):
 
         return class_probas
 
-
-def _to_index_labels(labels: torch.Tensor) -> torch.LongTensor:
-    """
-    Convert labels to index form.
-
-    Args:
-        labels (torch.Tensor): shape either of
-        - (batch_size,) with integer class indices
-        - (batch_size, num_classes) one-hot
-
-    Returns:
-        torch.LongTensor: shape (batch_size,), LongTensor of class indices
-    """
-
-    if labels.dim() == 1:
-        return labels.long()
-    elif labels.dim() == 2:
-        return labels.argmax(dim=-1).long()
-    else:
-        raise ValueError(
-            "labels must be (batch_size,) indices or (batch_size, num_classes) one-hot"
-        )
 
 def _segment_remaining_weights(idx_labels: torch.LongTensor) -> torch.Tensor:
     """
@@ -195,7 +198,7 @@ class TrendAwareLoss(nn.Module):
     def forward(
         self,
         logits: torch.Tensor,
-        labels: torch.Tensor
+        targets: torch.Tensor
     ) -> torch.Tensor:
         # Shape checks for logits
         if logits.dim() != 2:
@@ -203,7 +206,7 @@ class TrendAwareLoss(nn.Module):
         batch_size, num_classes = logits.shape
 
         # Convert labels to indices
-        idx_labels = _to_index_labels(labels)
+        idx_labels = _to_index_labels(targets)
         if idx_labels.shape != (batch_size,):
             raise ValueError(
                 f"labels shape {tuple(idx_labels.shape)} is not compatible with "
